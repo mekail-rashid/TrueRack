@@ -1188,6 +1188,10 @@ function focusInputField(measurementType) {
   </div>
 
   <div id="results" class="flex flex-col gap-3"></div>
+  <div id="communityLoadError" style="display:none;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:8px;">
+    <span style="font-size:13px;color:var(--text2);">Couldn't load community brands. Check your connection.</span>
+    <button onclick="loadCommunityBrands()" style="font-size:12px;font-family:'DM Mono',monospace;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;white-space:nowrap;">Try again</button>
+  </div>
 
   <div id="emptyState" class="text-center py-16 text-stone-400">
     <div class="text-4xl mb-3">📐</div>
@@ -1717,7 +1721,12 @@ async function submitAuth() {
       return;
     } else {
       var res = await client.auth.signInWithPassword({ email: email, password: password });
-      if (res.error) { showAuthError(res.error.message); btn.textContent = 'Sign in'; btn.disabled = false; return; }
+      if (res.error) {
+        var authErrMsg = res.error.message || '';
+        var isNetworkErr = authErrMsg.toLowerCase().includes('fetch') || authErrMsg.toLowerCase().includes('network') || authErrMsg.toLowerCase().includes('failed to fetch');
+        showAuthError(isNetworkErr ? 'Connection problem — check your internet and try again.' : authErrMsg);
+        btn.textContent = 'Sign in'; btn.disabled = false; return;
+      }
       _currentUser = res.data.user;
 
       // Check if this is a first sign-in after email confirmation
@@ -3819,13 +3828,17 @@ async function saveBrandToSupabase(brandName, productName, sizes, category, meas
 }
 
 async function loadCommunityBrands() {
+  var errorEl = document.getElementById('communityLoadError');
+  if (errorEl) errorEl.style.display = 'none';
   try {
     var catFilter = currentCategory ? '&category=eq.' + encodeURIComponent(currentCategory) : '';
     var res  = await sbFetch('community_brands?select=*&order=created_at.desc&limit=50' + catFilter);
+    if (!res.ok) throw new Error('Server error ' + res.status);
     var data = await res.json();
     communityBrandsRows = Array.isArray(data) ? data : [];
   } catch (e) {
     communityBrandsRows = [];
+    if (errorEl) errorEl.style.display = 'flex';
   }
   updateResults();
 }
@@ -4227,7 +4240,12 @@ window._pendingChartSave = { brandName: brandName, productName: productName, siz
 
   } catch(e) {
     console.error('parseChart error:', e);
-    resultEl.innerHTML = '<span style="color:#e57">Error: ' + (e.message || String(e)) + '</span>';
+    var errMsg = e.message || String(e);
+    var isNetwork = errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network') || errMsg.toLowerCase().includes('failed to fetch');
+    var friendlyMsg = isNetwork
+      ? 'Could not reach the size chart reader right now. Check your connection and try again.'
+      : 'Couldn\'t read the size chart — try again, or add more context in the text box (e.g. "measurements are in inches" or "chest column is half-chest").';
+    resultEl.innerHTML = '<div style="background:#fff0f0;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font-size:12px;color:#b91c1c;"><strong>Something went wrong.</strong> ' + friendlyMsg + '</div>';
   }
 
   if (btn) { btn.disabled = false; btn.textContent = '\u2736 Read with Gemini & Save'; }
@@ -4247,8 +4265,12 @@ async function confirmSaveChart() {
     clearPasteGuideImage();
     window._pendingChartSave = null;
   } else {
-    var detail = String(saveRes.message || 'Unknown error').replace(/</g, '\u003c');
-    if (verifyBlock) verifyBlock.innerHTML += '<p class="text-xs text-amber-800 mt-1">Could not save: ' + detail + '</p>';
+    var detail = String(saveRes.message || '').toLowerCase();
+    var isNetwork = detail.includes('fetch') || detail.includes('network') || detail.includes('failed');
+    var saveErrMsg = isNetwork
+      ? 'No connection — your submission couldn\'t be saved. Check your connection and try again.'
+      : 'Couldn\'t save to the community database. Try again in a moment.';
+    showToast(saveErrMsg, 5000);
   }
 }
 
