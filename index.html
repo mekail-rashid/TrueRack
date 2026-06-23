@@ -1706,24 +1706,37 @@ async function submitAuth() {
 
       var res = await client.auth.signUp({ email: email, password: password });
       if (res.error) { showAuthError(res.error.message); btn.textContent = 'Create account'; btn.disabled = false; return; }
-      _currentUser = res.data.user;
 
-      // Create profile
-      var profileRes = await createProfile(_currentUser.id, username);
-      if (profileRes.error) { showAuthError(profileRes.error); btn.textContent = 'Create account'; btn.disabled = false; return; }
+      // Store username locally — profile will be created after email confirmation
+      try { localStorage.setItem('pendingUsername', username.toLowerCase()); } catch(e) {}
 
-      await pushUserData();
-      showAuthSuccess('Account created! Check your email to verify.');
-      setTimeout(function() { closeAuthModal(); updateAuthUI(); showToast('Welcome to TrueRack! 🎉'); }, 2000);
+      // Show confirmation message — don't log in yet
+      showAuthSuccess('Almost there! Check your email and click the confirmation link to activate your account.');
+      btn.textContent = 'Create account';
+      btn.disabled = false;
+      return;
     } else {
       var res = await client.auth.signInWithPassword({ email: email, password: password });
       if (res.error) { showAuthError(res.error.message); btn.textContent = 'Sign in'; btn.disabled = false; return; }
       _currentUser = res.data.user;
-      await fetchProfile(_currentUser.id);
+
+      // Check if this is a first sign-in after email confirmation
+      var existingProfile = await fetchProfile(_currentUser.id);
+      if (!existingProfile) {
+        var pendingUsername = null;
+        try { pendingUsername = localStorage.getItem('pendingUsername'); } catch(e) {}
+        if (pendingUsername) {
+          var profileRes = await createProfile(_currentUser.id, pendingUsername);
+          if (profileRes.error) { showAuthError(profileRes.error); btn.textContent = 'Sign in'; btn.disabled = false; return; }
+          try { localStorage.removeItem('pendingUsername'); } catch(e) {}
+        }
+      }
+
       await pullUserData();
       closeAuthModal();
       updateAuthUI();
-      showToast('Welcome back' + (getCurrentUsername() ? ', @' + getCurrentUsername() + '!' : '!'));
+      var isNew = !existingProfile;
+      showToast(isNew ? 'Welcome to TrueRack! 🎉' : 'Welcome back' + (getCurrentUsername() ? ', @' + getCurrentUsername() + '!' : '!'));
     }
   } catch(e) {
     showAuthError('Something went wrong — try again');
