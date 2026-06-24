@@ -8,19 +8,26 @@ exports.handler = async function(event) {
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
   if (!resendKey) return { statusCode: 500, body: JSON.stringify({ error: 'Resend API key not configured' }) };
-  if (!supabaseUrl || !supabaseKey) return { statusCode: 500, body: JSON.stringify({ error: 'Supabase not configured' }) };
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase not configured:', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
+    return { statusCode: 500, body: JSON.stringify({ error: 'Supabase not configured' }) };
+  }
 
   let body;
   try {
     body = JSON.parse(event.body);
   } catch {
+    console.error('Failed to parse event body');
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
   }
 
   const { brand_name, product_name, reason, note, reported_by } = body;
   if (!brand_name || !reason) {
+    console.error('Missing required fields - brand_name:', brand_name, 'reason:', reason);
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
   }
+
+  console.log('[Report] Received:', { brand_name, product_name, reason, from: reported_by });
 
   // Save to Supabase
   try {
@@ -36,10 +43,12 @@ exports.handler = async function(event) {
     });
     if (!dbRes.ok) {
       const err = await dbRes.text();
-      console.error('Supabase error:', err);
+      console.error('[Report] Supabase failed:', { status: dbRes.status, error: err });
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to save report' }) };
     }
+    console.log('[Report] Saved to Supabase');
   } catch (e) {
+    console.error('[Report] Supabase connection failed:', e.message);
     return { statusCode: 502, body: JSON.stringify({ error: 'Could not reach database' }) };
   }
 
@@ -70,9 +79,10 @@ exports.handler = async function(event) {
         html: emailBody
       })
     });
+    console.log('[Report] Email sent');
   } catch (e) {
+    console.warn('[Report] Email failed (non-fatal):', e.message);
     // Email failure is non-fatal — report was already saved
-    console.error('Resend error:', e.message);
   }
 
   return {
