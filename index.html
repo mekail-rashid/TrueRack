@@ -3335,7 +3335,9 @@ function buildCard(brand, result, primaryValCm, secondaryStatus, hipStatus, cate
     if (alreadyReported) {
       rightSide += '<span style="font-size:10px;color:#e57;margin-left:8px;">⚑ Reported</span>';
     } else {
-      rightSide += '<button onclick="openReportModal(' + JSON.stringify(brand.name) + ',' + JSON.stringify(brand.product || '') + ',this)" style="font-size:10px;font-family:&quot;DM Mono&quot;,monospace;color:#22c55e;background:none;border:none;cursor:pointer;padding:0;margin-left:8px;font-weight:600;">Report</button>';
+      var safeName = (brand.name || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      var safeProduct = (brand.product || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      rightSide += '<button data-brand="' + safeName + '" data-product="' + safeProduct + '" onclick="openReportModalFromBtn(this)" style="font-size:10px;font-family:&quot;DM Mono&quot;,monospace;color:#fff;background:#22c55e;border:none;cursor:pointer;padding:3px 10px;margin-left:8px;font-weight:600;border-radius:999px;line-height:1.4;">Report</button>';
     }
     html += rightSide;
   }
@@ -4386,6 +4388,12 @@ Object.keys(measInputMap).forEach(function(inputId) {
 var _reportBrand = null;
 var _reportProduct = null;
 var _reportTriggerBtn = null;
+
+function openReportModalFromBtn(btn) {
+  var brandName = btn.getAttribute('data-brand') || '';
+  var productName = btn.getAttribute('data-product') || '';
+  openReportModal(brandName, productName, btn);
+}
 
 function openReportModal(brandName, productName, triggerBtn) {
   _reportBrand = brandName;
