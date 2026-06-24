@@ -3335,7 +3335,7 @@ function buildCard(brand, result, primaryValCm, secondaryStatus, hipStatus, cate
     if (alreadyReported) {
       rightSide += '<span style="font-size:10px;color:#e57;margin-left:8px;">⚑ Reported</span>';
     } else {
-      rightSide += '<button onclick="openReportModal(' + JSON.stringify(brand.name) + ',' + JSON.stringify(brand.product || '') + ',this)" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);background:none;border:none;cursor:pointer;padding:0;margin-left:8px;">Report</button>';
+      rightSide += '<button onclick="openReportModal(' + JSON.stringify(brand.name) + ',' + JSON.stringify(brand.product || '') + ',this)" style="font-size:10px;font-family:&quot;DM Mono&quot;,monospace;color:var(--text3);background:none;border:none;cursor:pointer;padding:0;margin-left:8px;">Report</button>';
     }
     html += rightSide;
   }
