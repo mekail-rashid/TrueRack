@@ -739,7 +739,7 @@
     <span class="settings-label">About</span>
     <div class="settings-row"><span>Tutorial</span><button onclick="closeSettings();showOnboarding();" style="font-size:12px;color:#22c55e;background:none;border:1px solid #22c55e;border-radius:8px;padding:4px 10px;cursor:pointer;font-family:'DM Mono',monospace;">Replay</button></div>
     <div class="settings-row"><span>Version</span><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);">1.0</span></div>
-    <div class="settings-row"><span>Feedback</span><a href="#" style="font-size:12px;color:var(--text3);text-decoration:underline;">Coming soon</a></div>
+    <div class="settings-row"><span>Feedback</span><a href="#" style="font-size:12px;color:var(--text3);text-decoration:underline;" onclick="document.getElementById('deletionModal').classList.add('show');">Submit Feedback</a></div>
   </div>
 </div>
 <div class="max-w-2xl mx-auto">
@@ -4474,6 +4474,49 @@ async function submitReport() {
     btn.disabled = false;
   }
 }
+
+async function submitDeletionRequest() {
+  var deletionType = document.getElementById('deletionType').value;
+  var note = document.getElementById('deletionNote').value.trim();
+  var resultEl = document.getElementById('deletionResult');
+
+  if (!deletionType) {
+    resultEl.innerHTML = '<span style="color:#e57;">Please select a deletion type.</span>';
+    return;
+  }
+
+  if (!_currentUser) {
+    resultEl.innerHTML = '<span style="color:#e57;">You must be signed in to submit a deletion request.</span>';
+    return;
+  }
+
+  resultEl.innerHTML = '<span style="color:#aaa;">Submitting...</span>';
+
+  try {
+    var res = await fetch('/api/deletion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: _currentUser.id,
+        email: _currentUser.email,
+        username: _currentUser.username || null,
+        deletion_type: deletionType,
+        note: note || null
+      })
+    });
+    var data = await res.json();
+    if (data.success) {
+      resultEl.innerHTML = '<span style="color:#16a34a;">Request submitted. We\'ll process it within 7 days.</span>';
+      document.getElementById('deletionType').value = '';
+      document.getElementById('deletionNote').value = '';
+    } else {
+      resultEl.innerHTML = '<span style="color:#e57;">Something went wrong. Please try again.</span>';
+    }
+  } catch (e) {
+    resultEl.innerHTML = '<span style="color:#e57;">Could not connect. Please try again.</span>';
+  }
+}
+
 </script>
 
 <!-- Report modal -->
@@ -4501,5 +4544,38 @@ async function submitReport() {
     </div>
   </div>
 </div>
+
+<div class="legal-modal-overlay" id="deletionModal">
+  <div class="legal-modal-box" style="max-width:460px;">
+    <div class="legal-modal-header">
+      <span class="legal-modal-title">Request Data Deletion</span>
+      <button onclick="document.getElementById('deletionModal').classList.remove('show')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);">✕</button>
+    </div>
+    <div class="legal-modal-body" style="padding:20px;">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Select what you'd like deleted. We'll process your request within 7 days and confirm by email.</p>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:6px;">Deletion Type</label>
+        <select id="deletionType" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:DM Sans,sans-serif;">
+          <option value="">Select an option</option>
+          <option value="Delete my account + all data">Delete my account + all data</option>
+          <option value="Delete my measurements only">Delete my measurements only</option>
+          <option value="Delete my community submissions">Delete my community submissions</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;color:var(--text);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:6px;">Additional Notes (optional)</label>
+        <textarea id="deletionNote" rows="3" placeholder="Any additional context..." style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:DM Sans,sans-serif;resize:none;"></textarea>
+      </div>
+      <div id="deletionResult" style="font-size:12px;margin-top:4px;"></div>
+    </div>
+    <div class="legal-modal-footer">
+      <button onclick="document.getElementById('deletionModal').classList.remove('show')" class="modal-btn">Cancel</button>
+      <button onclick="submitDeletionRequest()" class="modal-btn primary">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+
 </body>
 </html>
