@@ -1,28 +1,20 @@
-exports.handler = async function(event) {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const resendKey = process.env.RESEND_API_KEY;
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
-  if (!resendKey) return { statusCode: 500, body: JSON.stringify({ error: 'Resend API key not configured' }) };
-  if (!supabaseUrl || !supabaseKey) return { statusCode: 500, body: JSON.stringify({ error: 'Supabase not configured' }) };
+  if (!resendKey) return res.status(500).json({ error: 'Resend API key not configured' });
+  if (!supabaseUrl || !supabaseKey) return res.status(500).json({ error: 'Supabase not configured' });
 
-  let body;
-  try {
-    body = JSON.parse(event.body);
-  } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
-
-  const { brand_name, product_name, reason, note, reported_by } = body;
+  const { brand_name, product_name, reason, note, reported_by } = req.body;
   if (!brand_name || !reason) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
+    return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  // Save to Supabase
   try {
     const dbRes = await fetch(`${supabaseUrl}/rest/v1/reports`, {
       method: 'POST',
@@ -37,13 +29,12 @@ exports.handler = async function(event) {
     if (!dbRes.ok) {
       const err = await dbRes.text();
       console.error('Supabase error:', err);
-      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to save report' }) };
+      return res.status(500).json({ error: 'Failed to save report' });
     }
   } catch (e) {
-    return { statusCode: 502, body: JSON.stringify({ error: 'Could not reach database' }) };
+    return res.status(502).json({ error: 'Could not reach database' });
   }
 
-  // Send email via Resend
   try {
     const emailBody = `
 <h2>New TrueRack Report</h2>
@@ -54,7 +45,6 @@ exports.handler = async function(event) {
   <tr><td style="padding:6px 12px;font-weight:bold;color:#555;">Note</td><td style="padding:6px 12px;">${note || '—'}</td></tr>
   <tr><td style="padding:6px 12px;font-weight:bold;color:#555;">Reported by</td><td style="padding:6px 12px;">${reported_by || 'anonymous'}</td></tr>
 </table>
-<p style="margin-top:16px;font-size:12px;color:#999;">Review in your <a href="https://supabase.com">Supabase dashboard</a> → reports table.</p>
     `.trim();
 
     await fetch('https://api.resend.com/emails', {
@@ -71,12 +61,8 @@ exports.handler = async function(event) {
       })
     });
   } catch (e) {
-    // Email failure is non-fatal — report was already saved
     console.error('Resend error:', e.message);
   }
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ success: true })
-  };
-};
+  return res.status(200).json({ success: true });
+}

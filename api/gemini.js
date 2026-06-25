@@ -1,26 +1,18 @@
 const GEMINI_MODEL_TRYLIST = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
 
-exports.handler = async function(event) {
-  // Only allow POST
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Gemini API key not configured' }) };
+    return res.status(500).json({ error: 'Gemini API key not configured' });
   }
 
-  let body;
-  try {
-    body = JSON.parse(event.body);
-  } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
-
-  const { parts, jsonMode } = body;
+  const { parts, jsonMode } = req.body;
   if (!parts || !Array.isArray(parts)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Missing parts array' }) };
+    return res.status(400).json({ error: 'Missing parts array' });
   }
 
   const bodyObj = { contents: [{ parts }] };
@@ -34,43 +26,37 @@ exports.handler = async function(event) {
     const model = GEMINI_MODEL_TRYLIST[t];
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-    let res, data;
+    let response, data;
     try {
-      res = await fetch(url, {
+      response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyObj)
       });
-      data = await res.json();
+      data = await response.json();
     } catch (err) {
       lastError = err.message || 'Network error reaching Gemini.';
       if (t < GEMINI_MODEL_TRYLIST.length - 1) continue;
-      return { statusCode: 502, body: JSON.stringify({ error: lastError }) };
+      return res.status(502).json({ error: lastError });
     }
 
-    // Extract text from response
     const text = extractText(data);
     if (text) {
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim().replace(/```json|```/g, '').trim() })
-      };
+      return res.status(200).json({ text: text.trim().replace(/```json|```/g, '').trim() });
     }
 
-    // Check if we should retry with another model
     if (data.error) {
       lastError = data.error.message || 'Gemini error.';
-      if (shouldRetry(res.status, data) && t < GEMINI_MODEL_TRYLIST.length - 1) continue;
-      return { statusCode: res.status >= 400 ? res.status : 500, body: JSON.stringify({ error: lastError }) };
+      if (shouldRetry(response.status, data) && t < GEMINI_MODEL_TRYLIST.length - 1) continue;
+      return res.status(response.status >= 400 ? response.status : 500).json({ error: lastError });
     }
 
     lastError = 'No text in Gemini response. Try pasting the chart as text or another photo.';
     if (t < GEMINI_MODEL_TRYLIST.length - 1) continue;
   }
 
-  return { statusCode: 500, body: JSON.stringify({ error: lastError }) };
-};
+  return res.status(500).json({ error: lastError });
+}
 
 function extractText(data) {
   if (!data?.candidates?.[0]?.content?.parts) return null;

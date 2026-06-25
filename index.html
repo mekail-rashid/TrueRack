@@ -4006,7 +4006,7 @@ function geminiShouldRetryOtherModel(res, data) {
 
 async function callGeminiSizeChart(parts, opts) {
   opts = opts || {};
-  var res = await fetch('/.netlify/functions/gemini', {
+  var res = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ parts: parts, jsonMode: !!opts.jsonMode })
@@ -4444,7 +4444,7 @@ async function submitReport() {
   btn.disabled = true;
 
   try {
-    var res = await fetch('/.netlify/functions/report', {
+    var res = await fetch('/api/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
