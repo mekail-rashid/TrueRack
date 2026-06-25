@@ -534,6 +534,15 @@
   .loading-logo-fill.filled { clip-path:inset(0 0 0 0); }
   .loading-wordmark { font-family:'DM Sans',sans-serif; font-weight:800; font-size:22px; color:var(--text); text-align:center; margin-top:16px; letter-spacing:-0.3px; }
 
+  /* Legal / report modal */
+  .legal-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:50; align-items:center; justify-content:center; padding:20px; }
+  .legal-modal-overlay.show { display:flex; }
+  .legal-modal-box { background:var(--surface); border-radius:18px; width:100%; box-shadow:0 18px 45px var(--shadow); }
+  .legal-modal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .legal-modal-title { font-size:15px; font-weight:700; color:var(--text); }
+  .legal-modal-body { max-height:60vh; overflow-y:auto; }
+  .legal-modal-footer { display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--border); }
+
 </style>
 </head>
 <body class="min-h-screen py-12 px-4">
@@ -1826,17 +1835,17 @@ function applyCloudData(data) {
     defaultUnit: 'fitFinderDefaultUnit', defaultFit: 'fitFinderDefaultFit',
     theme: 'fitFinderTheme'
   };
+  var wrote = false;
   Object.keys(keys).forEach(function(cloudKey) {
     var localKey = keys[cloudKey];
     var localVal = localStorage.getItem(localKey);
     var cloudVal = data[cloudKey];
-    // Local wins if it has data, cloud fills in only empty local keys
     if (!localVal && cloudVal) {
       localStorage.setItem(localKey, cloudVal);
+      wrote = true;
     }
   });
-  // Reload the app state from the now-merged localStorage
-  location.reload();
+  if (wrote) location.reload();
 }
 
 async function pushUserData() {
@@ -3789,7 +3798,7 @@ function shouldRetrySaveWithoutAddedBy(body) {
   return false;
 }
 
-async function saveBrandToSupabase(brandName, productName, sizes, category, measureMethod, sleeveTyp, fitStyle, shopUrl) {
+async function saveBrandToSupabase(brandName, productName, sizes, category, measureMethod, sleeveType, fitStyle, shopUrl) {
   try {
     var cleanSizes = (sizes || []).map(function(s) {
       var clean = { label: String(s.label), low: +s.low, high: +s.high };
@@ -4390,6 +4399,10 @@ var _reportProduct = null;
 var _reportTriggerBtn = null;
 
 function openReportModalFromBtn(btn) {
+  if (!_currentUser) {
+    openAuthModal('signin');
+    return;
+  }
   var brandName = btn.getAttribute('data-brand') || '';
   var productName = btn.getAttribute('data-product') || '';
   openReportModal(brandName, productName, btn);
