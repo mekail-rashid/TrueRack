@@ -4131,7 +4131,8 @@ async function parseChart() {
   '  "unit": "cm" | "inches",\n' +
   '  "confidence": "high" | "medium" | "low",\n' +
   '  "conversion_note": "short human-readable explanation of what you detected and any conversion applied",\n' +
-  '  "sizes": [{"label":"SIZE","low":number,"high":number,"bodyLength":number|null,"shoulders":number|null,"sleeveLength":number|null,"waist":{"low":number,"high":number}|null}]\n' +
+  '  \"sleeve_type\": \"short\" | \"long\" | null,\\n' +
+  '  \"sizes\": [{\"label\":\"SIZE\",\"low\":number,\"high\":number,\"bodyLength\":number|null,\"shoulders\":number|null,\"sleeveLength\":number|null,\"waist\":{\"low\":number,\"high\":number}|null}]\\n' +
   '}\n' +
   'Rules for sizes:\n' +
   '- low and high must ALWAYS be full chest circumference in centimetres in the final output.\n' +
@@ -4142,7 +4143,8 @@ async function parseChart() {
   '- If only one chest number is given per size, set low and high to that same number.\n' +
   '- For bodyLength: extract garment body length (Total Length / Body Length / column B). Convert to cm if inches. Null if not present.\n' +
   '- For shoulders: extract shoulder width (Shoulders / Shoulder width). Convert to cm if inches. Null if not present.\n' +
-  '- For sleeveLength: extract sleeve length (Sleeve Length / column C). Convert to cm if inches. Null if not present.\n' +
+  '- For sleeveLength: extract sleeve length (Sleeve Length, Arm Length, Sleeve, column C, or similar). Convert to cm if inches. Null if not present.\\n' +
+  '- For sleeve_type: set to \"long\" if the chart has an Arm Length, Sleeve Length, or long sleeve column. Set to \"short\" if it has a Short Sleeve column. Set to null if no sleeve data is present.\\n' +
   '- For waist: extract waist range if present as {low, high}. If single value set both low and high to that value. Null if not present.\n' +
   '- Include every size row you can read (XS, S, M, L, numeric, international, etc.).\n' +
   '- Output strictly valid JSON: one object, no markdown, no explanation outside the JSON.\n';
@@ -4277,6 +4279,7 @@ var verifyHtml =
 resultEl.innerHTML = verifyHtml;
 var shopUrl = (document.getElementById('pasteShopUrl') ? document.getElementById('pasteShopUrl').value : '').trim();
 var pasteFitStyleEl = document.getElementById('pasteFitStyle');
+if (parsedJson && parsedJson.sleeve_type) sleeveType = parsedJson.sleeve_type;
 window._pendingChartSave = { brandName: brandName, productName: productName, sizes: sizes, category: category, measureMethod: measureMethod, sleeveType: sleeveType, fitStyle: pasteFitStyleEl ? pasteFitStyleEl.value : 'standard', shopUrl: shopUrl || null };
 
   } catch(e) {
