@@ -1295,7 +1295,7 @@ function focusInputField(measurementType) {
       <textarea id="pasteArea" placeholder="Paste size chart text here (optional if you upload an image):
 XS: 78-86cm  /  S chest 86-94  /  M | 94 | 102  /  L 37.5\" - 40\"
 Messy tables are fine — Gemini will sort it out."></textarea>
-      <button class="parse-btn" onclick="parseChart()">✦ Read with Gemini &amp; Save</button>
+      <button class="parse-btn" onclick="parseChart()">✦ Extract Size Chart & Save</button>
       <div id="pasteResult" class="paste-result"></div>
     </div>
   </div>
@@ -2487,7 +2487,7 @@ function categoryUsesBottomMeasurements(cat) {
   return false;
 }
 
-// Gemini API key is held server-side in the Netlify function — not exposed client-side.
+// Gemini API key is held server-side in the Vercel function — not exposed client-side.
 var SUPABASE_URL   = 'https://tmrmbulstoraanivhdxn.supabase.co';
 var SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRtcm1idWxzdG9yYWFuaXZoZHhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MzUwMDMsImV4cCI6MjA5NDExMTAwM30.1mLjuWlZI9hNnHzVlJrUjq38pacp-U2wnivfnq7Rscs';
 
@@ -2542,27 +2542,6 @@ function updateInputSlotHint() {
   var el = document.getElementById('inputSlotHint');
   if (!el) return;
   el.classList.add('hidden');
-}
-
-function handleGarmentViewChange(view) {
-  setDiagramView(view);
-  showGarmentViewMismatchWarning(view);
-}
-
-function showGarmentViewMismatchWarning(view) {
-  var el = document.getElementById('inputSlotHint');
-  if (!el) return;
-  var needsBottom = categoryUsesBottomMeasurements(currentCategory);
-
-  if (view === 'top' && needsBottom) {
-    el.textContent = 'This category uses waist, hip, and inseam — your measurement inputs are set up for those.';
-    el.classList.remove('hidden');
-  } else if (view === 'bottom' && !needsBottom) {
-    el.textContent = 'This category uses chest, waist, and shoulders — your measurement inputs are set up for those.';
-    el.classList.remove('hidden');
-  } else {
-    el.classList.add('hidden');
-  }
 }
 
 function handleGarmentViewChange(view) {
@@ -4293,7 +4272,7 @@ window._pendingChartSave = { brandName: brandName, productName: productName, siz
     resultEl.innerHTML = '<div style="background:#fff0f0;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font-size:12px;color:#b91c1c;"><strong>Something went wrong.</strong> ' + friendlyMsg + '</div>';
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = '\u2736 Read with Gemini & Save'; }
+  if (btn) { btn.disabled = false; btn.textContent = '✦ Extract Size Chart & Save'; }
 }
 
 async function confirmSaveChart() {
