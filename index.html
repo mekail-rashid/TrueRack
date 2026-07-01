@@ -4238,10 +4238,12 @@ return parts;
       throw new Error('No size data found. Crop tight around the chart, reduce glare, use a straighter photo, or paste the chart as text.');
     }
 
+    if (parsedJson && parsedJson.sleeve_type) sleeveType = parsedJson.sleeve_type;
     var tempBrand = {
       name: brandName, product: productName || brandName,
       url: null, notes: 'Community added.', measureNote: measureMethod !== 'full_chest' ? measureMethod.replace(/_/g,' ') : null,
-      sizes: sizes.map(function(s){ return { label:s.label, chest:{low:s.low, high:s.high}, waist:null }; })
+      sleeveType: sleeveType,
+      sizes: sizes.map(function(s){ return { label:s.label, chest:{low:s.low, high:s.high}, waist:s.waist||null, sleeveLength:s.sleeveLength||null }; })
     };
     var result = getTshirtResult(tempBrand, chestCm, null);
 var card   = buildCard(tempBrand, result, chestCm, null, null, 'tshirts');
@@ -4279,7 +4281,6 @@ var verifyHtml =
 resultEl.innerHTML = verifyHtml;
 var shopUrl = (document.getElementById('pasteShopUrl') ? document.getElementById('pasteShopUrl').value : '').trim();
 var pasteFitStyleEl = document.getElementById('pasteFitStyle');
-if (parsedJson && parsedJson.sleeve_type) sleeveType = parsedJson.sleeve_type;
 window._pendingChartSave = { brandName: brandName, productName: productName, sizes: sizes, category: category, measureMethod: measureMethod, sleeveType: sleeveType, fitStyle: pasteFitStyleEl ? pasteFitStyleEl.value : 'standard', shopUrl: shopUrl || null };
 
   } catch(e) {
